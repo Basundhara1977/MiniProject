@@ -59,6 +59,3 @@ public class Salary {
             e.printStackTrace();
         }
     }
-
-    // Add update and delete methods similar to other classes if needed
-}
