@@ -33,19 +33,41 @@ public class Employee {
             // Retrieve department ID based on department name
             int empDepartmentId = getDepartmentId(empDepartment);
 
-            String sql = "INSERT INTO employees (emp_name, emp_age, emp_designation, emp_department_id, emp_salary) " +
+            // Insert into employees table
+            String sqlInsertEmployee = "INSERT INTO employees (emp_name, emp_age, emp_designation, emp_department_id, emp_salary) " +
                     "VALUES (?, ?, ?, ?, ?)";
 
-            PreparedStatement preparedStatement = connection.prepareStatement(sql);
-            preparedStatement.setString(1, empName);
-            preparedStatement.setInt(2, empAge);
-            preparedStatement.setString(3, empDesignation);
-            preparedStatement.setInt(4, empDepartmentId);
-            preparedStatement.setDouble(5, empSalary);
+            PreparedStatement preparedStatementEmployee = connection.prepareStatement(sqlInsertEmployee, Statement.RETURN_GENERATED_KEYS);
+            preparedStatementEmployee.setString(1, empName);
+            preparedStatementEmployee.setInt(2, empAge);
+            preparedStatementEmployee.setString(3, empDesignation);
+            preparedStatementEmployee.setInt(4, empDepartmentId);
+            preparedStatementEmployee.setDouble(5, empSalary);
 
-            int rowsAffected = preparedStatement.executeUpdate();
-            if (rowsAffected > 0) {
+            int rowsAffectedEmployee = preparedStatementEmployee.executeUpdate();
+            if (rowsAffectedEmployee > 0) {
                 System.out.println("Employee added successfully.");
+
+                // Retrieve generated employee ID
+                ResultSet generatedKeysEmployee = preparedStatementEmployee.getGeneratedKeys();
+                int empId = -1;
+                if (generatedKeysEmployee.next()) {
+                    empId = generatedKeysEmployee.getInt(1);
+                    System.out.println("New Employee ID: " + empId);
+                }
+
+                // Insert into salary table
+                String sqlInsertSalary = "INSERT INTO salary (emp_id, salary_amount) VALUES (?, ?)";
+                PreparedStatement preparedStatementSalary = connection.prepareStatement(sqlInsertSalary);
+                preparedStatementSalary.setInt(1, empId);
+                preparedStatementSalary.setDouble(2, empSalary); // Set initial salary
+
+                int rowsAffectedSalary = preparedStatementSalary.executeUpdate();
+                if (rowsAffectedSalary > 0) {
+                    System.out.println("Salary added successfully for Employee ID: " + empId);
+                } else {
+                    System.out.println("Failed to add salary for Employee ID: " + empId);
+                }
             } else {
                 System.out.println("Failed to add employee.");
             }
@@ -55,15 +77,17 @@ public class Employee {
     }
 
     public void viewEmployees() {
-        String sql = "SELECT e.emp_id, e.emp_name, e.emp_age, e.emp_designation, d.dept_name, e.emp_salary " +
-                     "FROM employees e JOIN departments d ON e.emp_department_id = d.dept_id";
-        try (Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(sql)) {
+        try {
+            Statement statement = connection.createStatement();
+            String sql = "SELECT e.emp_id, e.emp_name, e.emp_age, e.emp_designation, d.dept_name, e.emp_salary " +
+                         "FROM employees e " +
+                         "JOIN departments d ON e.emp_department_id = d.dept_id";
+            ResultSet resultSet = statement.executeQuery(sql);
+
             System.out.println("Employee List:");
-            System.out.println("--------------------------------------------------------");
-            System.out.printf("| %-5s | %-20s | %-5s | %-20s | %-20s | %-10s |\n",
-                    "ID", "Name", "Age", "Designation", "Department", "Salary");
-            System.out.println("--------------------------------------------------------");
+            System.out.println("---------------------------------------------------------------------");
+            System.out.printf("| %-5s | %-20s | %-5s | %-20s | %-20s | %-10s |\n", "ID", "Name", "Age", "Designation", "Department", "Salary");
+            System.out.println("---------------------------------------------------------------------");
             while (resultSet.next()) {
                 int empId = resultSet.getInt("emp_id");
                 String empName = resultSet.getString("emp_name");
@@ -72,10 +96,9 @@ public class Employee {
                 String empDepartment = resultSet.getString("dept_name");
                 double empSalary = resultSet.getDouble("emp_salary");
 
-                System.out.printf("| %-5d | %-20s | %-5d | %-20s | %-20s | %-10.2f |\n",
-                        empId, empName, empAge, empDesignation, empDepartment, empSalary);
+                System.out.printf("| %-5d | %-20s | %-5d | %-20s | %-20s | %-10.2f |\n", empId, empName, empAge, empDesignation, empDepartment, empSalary);
             }
-            System.out.println("--------------------------------------------------------");
+            System.out.println("---------------------------------------------------------------------");
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -102,22 +125,21 @@ public class Employee {
             // Retrieve department ID based on department name
             int empDepartmentId = getDepartmentId(empDepartment);
 
-            String sql = "UPDATE employees SET emp_name = ?, emp_age = ?, emp_designation = ?, " +
-                    "emp_department_id = ?, emp_salary = ? WHERE emp_id = ?";
+            // Update employee in the database
+            String sqlUpdateEmployee = "UPDATE employees SET emp_name = ?, emp_age = ?, emp_designation = ?, emp_department_id = ?, emp_salary = ? WHERE emp_id = ?";
+            PreparedStatement preparedStatementEmployee = connection.prepareStatement(sqlUpdateEmployee);
+            preparedStatementEmployee.setString(1, empName);
+            preparedStatementEmployee.setInt(2, empAge);
+            preparedStatementEmployee.setString(3, empDesignation);
+            preparedStatementEmployee.setInt(4, empDepartmentId);
+            preparedStatementEmployee.setDouble(5, empSalary);
+            preparedStatementEmployee.setInt(6, empId);
 
-            PreparedStatement preparedStatement = connection.prepareStatement(sql);
-            preparedStatement.setString(1, empName);
-            preparedStatement.setInt(2, empAge);
-            preparedStatement.setString(3, empDesignation);
-            preparedStatement.setInt(4, empDepartmentId);
-            preparedStatement.setDouble(5, empSalary);
-            preparedStatement.setInt(6, empId);
-
-            int rowsAffected = preparedStatement.executeUpdate();
+            int rowsAffected = preparedStatementEmployee.executeUpdate();
             if (rowsAffected > 0) {
-                System.out.println("Employee updated successfully.");
+                System.out.println("Employee with ID " + empId + " updated successfully.");
             } else {
-                System.out.println("Failed to update employee.");
+                System.out.println("Failed to update employee with ID " + empId);
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -128,22 +150,33 @@ public class Employee {
         try {
             System.out.print("Enter employee ID to delete: ");
             int empId = scanner.nextInt();
+            scanner.nextLine(); // Consume newline
 
-            String sql = "DELETE FROM employees WHERE emp_id = ?";
+            // Delete related salary records first
+            String sqlDeleteSalary = "DELETE FROM salary WHERE emp_id = ?";
+            PreparedStatement preparedStatementSalary = connection.prepareStatement(sqlDeleteSalary);
+            preparedStatementSalary.setInt(1, empId);
+            int rowsAffectedSalary = preparedStatementSalary.executeUpdate();
+            if (rowsAffectedSalary > 0) {
+                System.out.println(rowsAffectedSalary + " salary record(s) deleted for Employee ID: " + empId);
+            }
 
-            PreparedStatement preparedStatement = connection.prepareStatement(sql);
-            preparedStatement.setInt(1, empId);
+            // Then delete the employee
+            String sqlDeleteEmployee = "DELETE FROM employees WHERE emp_id = ?";
+            PreparedStatement preparedStatementEmployee = connection.prepareStatement(sqlDeleteEmployee);
+            preparedStatementEmployee.setInt(1, empId);
 
-            int rowsAffected = preparedStatement.executeUpdate();
-            if (rowsAffected > 0) {
-                System.out.println("Employee deleted successfully.");
+            int rowsAffectedEmployee = preparedStatementEmployee.executeUpdate();
+            if (rowsAffectedEmployee > 0) {
+                System.out.println("Employee with ID " + empId + " deleted successfully.");
             } else {
-                System.out.println("Failed to delete employee.");
+                System.out.println("Failed to delete employee with ID " + empId);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
+
 
     // Helper method to retrieve department ID based on department name
     private int getDepartmentId(String deptName) throws SQLException {
